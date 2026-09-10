@@ -103,21 +103,13 @@ else:
             with open(file_path, "rb") as pdf_file:
               b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
 
-            # عرض عارض آمن يتيح الطباعة والعرض بدون قيود الـ iframe التقليدي
+            # عرض المستند داخل نفس الصفحة بشكل مرئي باستخدام عنصر Object مع بديل قوي للتحميل والطباعة
             st.markdown(
                 f"""
-                <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; border: 1px dashed #ff4b4b;">
-                    <p style="font-weight: bold; color: #333;">ملف PDF جاهز للعرض والطباعة المباشرة:</p>
-                    <embed src="data:application/pdf;base64,{b64_pdf}" width="100%" height="500px" type="application/pdf">
-                    <br><br>
-                    <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="
-                        padding: 0.5em 1.2em;
-                        background-color: #ff4b4b;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 5px;
-                        font-weight: bold;
-                    ">🖨️ فتح المستند بشاشة كاملة للطباعة</a>
+                <div style="text-align: center; padding: 10px; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                    <object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="600px">
+                        <p style="color: red; font-weight: bold;">متصفحك الحالي لا يدعم العرض المباشر، يمكنك معاينته وتحميله بالأسفل مباشرة.</p>
+                    </object>
                 </div>
                 """,
                 unsafe_allow_html=True,
