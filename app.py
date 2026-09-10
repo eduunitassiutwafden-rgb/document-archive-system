@@ -99,13 +99,32 @@ else:
         elif ext == "pdf":
           file_size = os.path.getsize(file_path)
           if file_size > 0:
-            with open(file_path, "rb") as pdf_file:
-              base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
-            st.markdown(
-                f'<iframe src="data:application/pdf;base64,{base64_pdf}"'
-                ' width="100%" height="600px" type="application/pdf"></iframe>',
-                unsafe_allow_html=True,
+            st.info(
+                "📄 ملف PDF جاهز للمعاينة المباشرة أو التنزيل الفوري على جهازك"
+                " أو الموبايل."
             )
+            with open(file_path, "rb") as pdf_file:
+              PDFbyte = pdf_file.read()
+
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+              st.download_button(
+                  label="📥 تحميل ومعاينة ملف الـ PDF",
+                  data=PDFbyte,
+                  file_name=file_name,
+                  mime="application/pdf",
+                  key=f"download_pdf_{file_name}",
+              )
+            with col_p2:
+              b64_pdf = base64.b64encode(PDFbyte).decode("utf-8")
+              href = (
+                  f'<a href="data:application/pdf;base64,{b64_pdf}"'
+                  f' target="_blank" style="display: inline-block; padding:'
+                  ' 0.5em 1em; background-color: #ff4b4b; color: white;'
+                  ' text-decoration: none; border-radius: 4px; font-weight:'
+                  ' bold;">🔍 فتح الـ PDF في تبويب جديد</a>'
+              )
+              st.markdown(href, unsafe_allow_html=True)
         st.markdown("---")
 
       if show_preview:
