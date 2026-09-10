@@ -80,34 +80,45 @@ else:
           )
 
       with col3:
-        # زر فتح المعاينة والطباعة بالطريقة المباشرة المطلوبة
-        if st.button(
-            "معاينة / طباعة", key=f"print_{selected_category}_{file_name}"
-        ):
-          # قراءة الملف وتحويله إلى Base64 لضمان فتحه في تبويب جديد دون مشاكل مسارات السحابة
-          with open(file_path, "rb") as f_preview:
-            b64_data = base64.b64encode(f_preview.read()).decode("utf-8")
+        preview_key = f"preview_{selected_category}_{file_name}"
+        show_preview = st.button("👁️ معاينة", key=preview_key)
 
-          ext = file_name.split(".")[-1].lower()
-          mime_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+      # --- عرض المعاينة في نفس الصفحة عند الضغط على زر معاينة ---
+      if st.session_state.get(f"state_{preview_key}", False):
+        st.markdown(
+            f"""
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-top: 10px; margin-bottom: 15px;">
+                <h4 style="color: #333; margin-top: 0;">🔍 معاينة المستند: {file_name}</h4>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-          st.markdown(
-              f"""
-                <div style="margin-top: 10px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
-                    <a href="data:{mime_type};base64,{b64_data}" target="_blank" style="
-                        display: inline-block;
-                        padding: 0.45em 0.8em;
-                        background-color: #ff4b4b;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 4px;
-                        font-size: 14px;
-                        font-weight: bold;
-                    ">🖨️ اضغط هنا لفتح وطفاعة المستند</a>
-                </div>
-                """,
-              unsafe_allow_html=True,
-          )
+        ext = file_name.split(".")[-1].lower()
+        if ext in ["png", "jpg", "jpeg"]:
+          st.image(file_path, caption=file_name, use_container_width=True)
+        elif ext == "pdf":
+          file_size = os.path.getsize(file_path)
+          if file_size > 0:
+            with open(file_path, "rb") as pdf_file:
+              base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+            st.markdown(
+                f'<iframe src="data:application/pdf;base64,{base64_pdf}"'
+                ' width="100%" height="600px" type="application/pdf"></iframe>',
+                unsafe_allow_html=True,
+            )
+
+        if st.button("❌ إغلاق المعاينة", key=f"close_{preview_key}"):
+          st.session_state[f"state_{preview_key}"] = False
+          st.rerun()
+
+        st.markdown("---")
+
+      if show_preview:
+        st.session_state[f"state_{preview_key}"] = (
+            not st.session_state.get(f"state_{preview_key}", False)
+        )
+        st.rerun()
 
   else:
     st.warning("لا توجد مستندات تطابق بحثك في هذا القسم.")
