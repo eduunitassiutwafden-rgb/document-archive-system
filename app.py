@@ -80,58 +80,34 @@ else:
           )
 
       with col3:
-        preview_key = f"preview_{selected_category}_{file_name}"
-        show_preview = st.button("👁️ معاينة", key=preview_key)
+        # زر فتح المعاينة والطباعة بالطريقة المباشرة المطلوبة
+        if st.button(
+            "معاينة / طباعة", key=f"print_{selected_category}_{file_name}"
+        ):
+          # قراءة الملف وتحويله إلى Base64 لضمان فتحه في تبويب جديد دون مشاكل مسارات السحابة
+          with open(file_path, "rb") as f_preview:
+            b64_data = base64.b64encode(f_preview.read()).decode("utf-8")
 
-      # عرض المعاينة
-      if st.session_state.get(f"state_{preview_key}", False):
-        if st.button("❌ إغلاق المعاينة", key=f"close_{preview_key}"):
-          st.session_state[f"state_{preview_key}"] = False
-          st.rerun()
+          ext = file_name.split(".")[-1].lower()
+          mime_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
 
-        st.markdown(
-            f"--- \n 🔍 **معاينة المستند: {file_name}**", unsafe_allow_html=True
-        )
-
-        ext = file_name.split(".")[-1].lower()
-        if ext in ["png", "jpg", "jpeg"]:
-          st.image(file_path, caption=file_name, width="stretch")
-        elif ext == "pdf":
-          file_size = os.path.getsize(file_path)
-          if file_size > 0:
-            st.info(
-                "📄 ملف PDF جاهز للمعاينة المباشرة أو التنزيل الفوري على جهازك"
-                " أو الموبايل."
-            )
-            with open(file_path, "rb") as pdf_file:
-              PDFbyte = pdf_file.read()
-
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-              st.download_button(
-                  label="📥 تحميل ومعاينة ملف الـ PDF",
-                  data=PDFbyte,
-                  file_name=file_name,
-                  mime="application/pdf",
-                  key=f"download_pdf_{file_name}",
-              )
-            with col_p2:
-              b64_pdf = base64.b64encode(PDFbyte).decode("utf-8")
-              href = (
-                  f'<a href="data:application/pdf;base64,{b64_pdf}"'
-                  f' target="_blank" style="display: inline-block; padding:'
-                  ' 0.5em 1em; background-color: #ff4b4b; color: white;'
-                  ' text-decoration: none; border-radius: 4px; font-weight:'
-                  ' bold;">🔍 فتح الـ PDF في تبويب جديد</a>'
-              )
-              st.markdown(href, unsafe_allow_html=True)
-        st.markdown("---")
-
-      if show_preview:
-        st.session_state[f"state_{preview_key}"] = (
-            not st.session_state.get(f"state_{preview_key}", False)
-        )
-        st.rerun()
+          st.markdown(
+              f"""
+                <div style="margin-top: 10px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
+                    <a href="data:{mime_type};base64,{b64_data}" target="_blank" style="
+                        display: inline-block;
+                        padding: 0.45em 0.8em;
+                        background-color: #ff4b4b;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        font-weight: bold;
+                    ">🖨️ اضغط هنا لفتح وطفاعة المستند</a>
+                </div>
+                """,
+              unsafe_allow_html=True,
+          )
 
   else:
     st.warning("لا توجد مستندات تطابق بحثك في هذا القسم.")
