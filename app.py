@@ -19,6 +19,8 @@ st.markdown(
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
+    .stDeployButton {display: none;}
+    [data-testid="stStatusWidget"] {visibility: hidden;}
     </style>
     """,
     unsafe_allow_html=True,
