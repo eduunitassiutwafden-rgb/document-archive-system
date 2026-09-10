@@ -100,20 +100,39 @@ else:
         elif ext == "pdf":
           file_size = os.path.getsize(file_path)
           if file_size > 0:
-            with open(file_path, "rb") as pdf_file:
-              b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+            try:
+              import fitz  # استدعاء مكتبة PyMuPDF لعرض الـ PDF كصور
 
-            # عرض المستند داخل نفس الصفحة بشكل مرئي باستخدام عنصر Object مع بديل قوي للتحميل والطباعة
-            st.markdown(
-                f"""
-                <div style="text-align: center; padding: 10px; background: white; border-radius: 8px; border: 1px solid #ddd;">
-                    <object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="600px">
-                        <p style="color: red; font-weight: bold;">متصفحك الحالي لا يدعم العرض المباشر، يمكنك معاينته وتحميله بالأسفل مباشرة.</p>
-                    </object>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+              doc = fitz.open(file_path)
+              st.success(
+                  f"📄 تم فتح المستند بنجاح (عدد الصفحات: {len(doc)}) العرض"
+                  " مباشر داخل الصفحة:"
+              )
+
+              for page_num, page in enumerate(doc):
+                pix = page.get_pixmap(dpi=150)  # جودة عالية وواضحة جداً
+                img = Image.frombytes(
+                    "RGB", [pix.width, pix.height], pix.samples
+                )
+                st.image(
+                    img,
+                    caption=f"صفحة {page_num + 1} من {file_name}",
+                    use_container_width=True,
+                )
+              doc.close()
+            except Exception as e:
+              # حل بديل آمن في حال عدم توفر المكتبة مؤقتاً
+              with open(file_path, "rb") as pdf_file:
+                b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+              st.markdown(
+                  f"""
+                    <div style="text-align: center; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
+                        <p style="color: #333; font-weight: bold;">يمكنك تحميل أو معاينة المستند مباشرة:</p>
+                        <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="padding: 0.5em 1em; background-color: #ff4b4b; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">📥 تحميل ومعاينة المستند</a>
+                    </div>
+                    """,
+                  unsafe_allow_html=True,
+              )
 
         if st.button("❌ إغلاق المعاينة", key=f"close_{preview_key}"):
           st.session_state[f"state_{preview_key}"] = False
