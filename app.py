@@ -172,49 +172,99 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
     st.success("تم تسجيل الدخول بنجاح كمدير! ✅")
     st.divider()
 
-    # --- القسم الأول: رفع مستند جديد ---
+    # --- القسم الأول: رفع مستند جديد مع منع التكرار ---
     st.subheader("📤 رفع مستند جديد")
-    with st.form("upload_form"):
-      existing_cats = [
-          d
-          for d in os.listdir(BASE_DOCS_DIR)
-          if os.path.isdir(os.path.join(BASE_DOCS_DIR, d))
-      ]
-      new_cat = st.text_input(
-          "أو اكتب اسم قسم جديد (اختياري):", placeholder="مثال: عقود جديدة"
-      )
-      selected_target_cat = st.selectbox(
-          "اختر القسم للرفع:",
-          options=existing_cats if existing_cats else ["عام"],
-      )
 
-      target_category = (
-          new_cat.strip()
-          if new_cat
-          else (selected_target_cat if selected_target_cat else "عام")
-      )
+    existing_cats = [
+        d
+        for d in os.listdir(BASE_DOCS_DIR)
+        if os.path.isdir(os.path.join(BASE_DOCS_DIR, d))
+    ]
+    new_cat = st.text_input(
+        "أو اكتب اسم قسم جديد (اختياري):", placeholder="مثال: عقود جديدة"
+    )
+    selected_target_cat = st.selectbox(
+        "اختر القسم للرفع:",
+        options=existing_cats if existing_cats else ["عام"],
+        key="upload_cat_select",
+    )
 
-      uploaded_file = st.file_uploader(
-          "اختر الملف (PDF أو صور)", type=["pdf", "png", "jpg", "jpeg"]
-      )
+    target_category = (
+        new_cat.strip()
+        if new_cat
+        else (selected_target_cat if selected_target_cat else "عام")
+    )
 
-      submit_upload = st.form_submit_button(label="رفع الملف الآن")
+    uploaded_file = st.file_uploader(
+        "اختر الملف (PDF أو صور)", type=["pdf", "png", "jpg", "jpeg"]
+    )
 
-      if submit_upload:
-        if uploaded_file:
-          cat_path = os.path.join(BASE_DOCS_DIR, target_category)
-          if not os.path.exists(cat_path):
-            os.makedirs(cat_path)
+    # التحقق من تكرار اسم الملف قبل الحفظ النهائي
+    if uploaded_file is not None:
+      target_cat_path = os.path.join(BASE_DOCS_DIR, target_category)
+      existing_file_path = os.path.join(target_cat_path, uploaded_file.name)
 
-          file_path = os.path.join(cat_path, uploaded_file.name)
+      if os.path.exists(existing_file_path):
+        st.warning(
+            f"⚠️ تنبيه: الملف **({uploaded_file.name})** موجود مسبقاً في قسم"
+            f" **({target_category})**!"
+        )
+
+        # زر معاينة الملف القديم للمقارنة
+        with st.expander("👀 معاينة الملف القديم الموجود حالياً"):
+          old_ext = uploaded_file.name.split(".")[-1].lower()
+          if old_ext in ["png", "jpg", "jpeg"]:
+            st.image(
+                existing_file_path,
+                caption="الملف القديم",
+                use_container_width=True,
+            )
+          elif old_ext == "pdf":
+            try:
+              import fitz
+
+              old_doc = fitz.open(existing_file_path)
+              for op_num, op_page in enumerate(old_doc):
+                op_pix = op_page.get_pixmap(dpi=150)
+                op_img = Image.frombytes(
+                    "RGB", [op_pix.width, op_pix.height], op_pix.samples
+                )
+                st.image(
+                    op_img,
+                    caption=f"صفحة {op_num + 1} من الملف القديم",
+                    use_container_width=True,
+                )
+              old_doc.close()
+            except Exception:
+              st.info(
+                  "الملف القديم موجود ويمكن تحميله من جدول العرض بالأعلى."
+              )
+
+        # خيارات الموافقة على الاستبدال أو الإلغاء
+        col_opt1, col_opt2 = st.columns(2)
+        with col_opt1:
+          if st.button("✅ موافق (استبدال ورفع الملف الجديد)", type="primary"):
+            with open(existing_file_path, "wb") as f:
+              f.write(uploaded_file.getbuffer())
+            st.success(
+                f"تم تحديث ورفع المستند ({uploaded_file.name}) بنجاح!"
+            )
+            st.rerun()
+        with col_opt2:
+          if st.button("❌ إلغاء الرفع"):
+            st.info("تم إلغاء عملية الرفع.")
+            st.rerun()
+
+      else:
+        if st.button("رفع الملف الآن", type="primary"):
+          if not os.path.exists(target_cat_path):
+            os.makedirs(target_cat_path)
+
+          file_path = os.path.join(target_cat_path, uploaded_file.name)
           with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-          st.success(
-              f"تم رفع الملف بنجاح إلى قسم: **{target_category}**! قم بتحديث"
-              " الصفحة."
-          )
-        else:
-          st.warning("الرجاء اختيار ملف أولاً.")
+          st.success(f"تم رفع الملف بنجاح إلى قسم: **{target_category}**!")
+          st.rerun()
 
     st.divider()
 
