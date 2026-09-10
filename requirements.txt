@@ -1,3 +1,4 @@
 streamlit
 qrcode
 Pillow
+PyMuPDF
