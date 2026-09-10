@@ -13,6 +13,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # إعداد المجلد الرئيسي للمستندات
 BASE_DOCS_DIR = "documents"
 if not os.path.exists(BASE_DOCS_DIR):
