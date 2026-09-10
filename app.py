@@ -83,11 +83,11 @@ else:
         preview_key = f"preview_{selected_category}_{file_name}"
         show_preview = st.button("👁️ معاينة", key=preview_key)
 
-      # --- عرض المعاينة في نفس الصفحة عند الضغط على زر معاينة ---
+      # --- عرض المعاينة بطريقة ذكية وآمنة داخل الصفحة ---
       if st.session_state.get(f"state_{preview_key}", False):
         st.markdown(
             f"""
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-top: 10px; margin-bottom: 15px;">
+            <div style="background-color: #f0f2f6; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; margin-bottom: 15px;">
                 <h4 style="color: #333; margin-top: 0;">🔍 معاينة المستند: {file_name}</h4>
             </div>
             """,
@@ -101,10 +101,25 @@ else:
           file_size = os.path.getsize(file_path)
           if file_size > 0:
             with open(file_path, "rb") as pdf_file:
-              base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+              b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+
+            # عرض عارض آمن يتيح الطباعة والعرض بدون قيود الـ iframe التقليدي
             st.markdown(
-                f'<iframe src="data:application/pdf;base64,{base64_pdf}"'
-                ' width="100%" height="600px" type="application/pdf"></iframe>',
+                f"""
+                <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; border: 1px dashed #ff4b4b;">
+                    <p style="font-weight: bold; color: #333;">ملف PDF جاهز للعرض والطباعة المباشرة:</p>
+                    <embed src="data:application/pdf;base64,{b64_pdf}" width="100%" height="500px" type="application/pdf">
+                    <br><br>
+                    <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="
+                        padding: 0.5em 1.2em;
+                        background-color: #ff4b4b;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        font-weight: bold;
+                    ">🖨️ فتح المستند بشاشة كاملة للطباعة</a>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
