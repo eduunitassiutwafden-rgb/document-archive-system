@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 import shutil
 import streamlit as st
 import qrcode
@@ -26,6 +27,26 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# دالة ذكية لتنظيف وتوحيد الحروف العربية لتجاهل الفروق الإملائية
+def normalize_arabic(text):
+  if not text:
+    return ""
+  # إزالة الحركات التشكيلية
+  text = re.sub(r"[\u064b-\u0652]", "", text)
+  # توحيد الألفات (أ, إ, آ, لإ, لأ -> ا)
+  text = re.sub("[إأآٱٱ]", "ا", text)
+  text = re.sub("لإ", "لا", text)
+  text = re.sub("لأ", "لا", text)
+  # توحيد الهاء والتاء المربوطة (ه, ة -> ه أو ت - سنقوم بتوحيدهم إلى حرف موحد لتجاهل الفارق)
+  text = text.replace("ة", "ه")
+  # توحيد الياء والألف المقصورة (ى, ي, ؤ, ئ -> ي أو إزالة الفارق)
+  text = text.replace("ى", "ي")
+  text = text.replace("ؤ", "و")
+  text = text.replace("ئ", "ي")
+  return text.strip().lower()
+
+
 # إعداد المجلد الرئيسي للمستندات
 BASE_DOCS_DIR = "documents"
 if not os.path.exists(BASE_DOCS_DIR):
@@ -34,8 +55,8 @@ if not os.path.exists(BASE_DOCS_DIR):
 # --- 1. رأس الصفحة والعنوان ---
 st.title("🗂️ بوابة استعراض وطباعة المستندات")
 st.markdown(
-    "مرحباً بك. يمكنك تصفح المستندات مقسمة حسب الأقسام، أو البحث العام في كافة"
-    " المستندات مباشرة."
+    "مرحباً بك. يمكنك تصفح المستندات مقسمة حسب الأقسام، أو البحث العام الذكي في"
+    " كافة المستندات."
 )
 st.divider()
 
@@ -45,16 +66,19 @@ categories = [
     if os.path.isdir(os.path.join(BASE_DOCS_DIR, d))
 ]
 
-# --- ميزة البحث العام في جميع الأقسام للمستخدمين ---
-st.subheader("🔍 البحث العام في كافة المستندات والأقسام")
+# --- ميزة البحث العام الذكي في جميع الأقسام للمستخدمين ---
+st.subheader("🔍 البحث العام الذكي في كافة المستندات والأقسام")
 global_search = st.text_input(
-    "اكتب اسم المستند للبحث عنه في جميع الأقسام:",
-    placeholder="اكتب للبحث الشامل...",
+    "اكتب اسم المستند أو جزءاً منه (يتجاهل الهمزات والتاء المربوطة والياء):",
+    placeholder="اكتب للبحث الذكي...",
     key="global_search_input",
 )
 
 if global_search.strip():
-  st.markdown(f"**نتائج البحث العام عن:** `{global_search}`")
+  normalized_query = normalize_arabic(global_search)
+  st.markdown(
+      f"**نتائج البحث الذكي عن:** `{global_search}` (يتجاهل الفروق الإملائية)"
+  )
   found_any = False
 
   for cat in categories:
@@ -62,8 +86,12 @@ if global_search.strip():
     c_files = [
         f for f in os.listdir(c_path) if os.path.isfile(os.path.join(c_path, f))
     ]
+
+    # مطابقة ذكية تقارن النصوص بعد تنظيفها من الفروق الإملائية
     matched_files = [
-        f for f in c_files if global_search.lower() in f.lower()
+        f
+        for f in c_files
+        if normalized_query in normalize_arabic(f)
     ]
 
     if matched_files:
@@ -149,7 +177,7 @@ if global_search.strip():
           st.rerun()
 
   if not found_any:
-    st.warning("لا توجد مستندات تطابق بحثك العام في أي من الأقسام.")
+    st.warning("لا توجد مستندات تطابق بحثك الذكي في أي من الأقسام.")
 
   st.divider()
 
@@ -171,13 +199,16 @@ else:
       if os.path.isfile(os.path.join(cat_path, f))
   ]
 
-  # خانة البحث داخل القسم المحدد
+  # خانة البحث الذكي داخل القسم المحدد
   search_query = st.text_input(
-      f"بحث داخل قسم ({selected_category}):", placeholder="اكتب اسم المستند..."
+      f"بحث ذكي داخل قسم ({selected_category}):", placeholder="اكتب للبحث..."
   )
 
+  normalized_cat_query = normalize_arabic(search_query)
   filtered_files = [
-      f for f in files if search_query.lower() in f.lower()
+      f
+      for f in files
+      if normalized_cat_query in normalize_arabic(f)
   ]
 
   if filtered_files:
@@ -267,7 +298,7 @@ else:
         st.rerun()
 
   else:
-    st.warning("لا توجد مستندات تطابق بحثك في هذا القسم.")
+    st.warning("لا توجد مستندات تطابق بحثك الذكي في هذا القسم.")
 
 # --- 3. لوحة تحكم المدير (المخفية تماماً في أسفل الصفحة) ---
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
