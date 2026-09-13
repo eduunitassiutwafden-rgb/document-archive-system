@@ -315,7 +315,7 @@ with st.expander(
         " إلى جهازك:"
     )
 
-    whatsapp_group_link = "https://chat.whatsapp.com/BC50W9tVIkkEPYsI7t8ISN"
+    whatsapp_group_link = "https://web.whatsapp.com/"
 
     st.markdown(
         f"""
