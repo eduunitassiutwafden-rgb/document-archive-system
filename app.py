@@ -31,22 +31,130 @@ BASE_DOCS_DIR = "documents"
 if not os.path.exists(BASE_DOCS_DIR):
   os.makedirs(BASE_DOCS_DIR)
 
-# --- 1. رأس الصفحة والعنوان (أول شيء يظهر للعامة) ---
+# --- 1. رأس الصفحة والعنوان ---
 st.title("🗂️ بوابة استعراض وطباعة المستندات")
 st.markdown(
-    "مرحباً بك. يمكنك تصفح المستندات مقسمة حسب الأقسام، ومعاينتها أو تحميلها"
-    " مباشرة."
+    "مرحباً بك. يمكنك تصفح المستندات مقسمة حسب الأقسام، أو البحث العام في كافة"
+    " المستندات مباشرة."
 )
 st.divider()
-
-# --- 2. اختيار القسم أولاً ---
-st.header("📂 أقسام المستندات")
 
 categories = [
     d
     for d in os.listdir(BASE_DOCS_DIR)
     if os.path.isdir(os.path.join(BASE_DOCS_DIR, d))
 ]
+
+# --- ميزة البحث العام في جميع الأقسام للمستخدمين ---
+st.subheader("🔍 البحث العام في كافة المستندات والأقسام")
+global_search = st.text_input(
+    "اكتب اسم المستند للبحث عنه في جميع الأقسام:",
+    placeholder="اكتب للبحث الشامل...",
+    key="global_search_input",
+)
+
+if global_search.strip():
+  st.markdown(f"**نتائج البحث العام عن:** `{global_search}`")
+  found_any = False
+
+  for cat in categories:
+    c_path = os.path.join(BASE_DOCS_DIR, cat)
+    c_files = [
+        f for f in os.listdir(c_path) if os.path.isfile(os.path.join(c_path, f))
+    ]
+    matched_files = [
+        f for f in c_files if global_search.lower() in f.lower()
+    ]
+
+    if matched_files:
+      found_any = True
+      st.markdown(f"📂 قسم: **{cat}**")
+      for file_name in matched_files:
+        file_path = os.path.join(c_path, file_name)
+
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1:
+          st.markdown(f"📄 **{file_name}**")
+
+        with col2:
+          with open(file_path, "rb") as f:
+            st.download_button(
+                label="تحميل",
+                data=f,
+                file_name=file_name,
+                mime="application/octet-stream",
+                key=f"g_dl_{cat}_{file_name}",
+            )
+
+        with col3:
+          g_preview_key = f"g_preview_{cat}_{file_name}"
+          g_show_preview = st.button("👁️ معاينة", key=g_preview_key)
+
+        # عرض المعاينة للبحث العام
+        if st.session_state.get(f"state_{g_preview_key}", False):
+          st.markdown(
+              f"""
+                    <div style="background-color: #f0f2f6; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #333; margin-top: 0;">🔍 معاينة المستند: {file_name} (قسم: {cat})</h4>
+                    </div>
+                    """,
+              unsafe_allow_html=True,
+          )
+
+          ext = file_name.split(".")[-1].lower()
+          if ext in ["png", "jpg", "jpeg"]:
+            st.image(file_path, caption=file_name, use_container_width=True)
+          elif ext == "pdf":
+            file_size = os.path.getsize(file_path)
+            if file_size > 0:
+              try:
+                import fitz
+
+                doc = fitz.open(file_path)
+                st.success(
+                    f"📄 تم فتح المستند بنجاح (عدد الصفحات: {len(doc)})"
+                )
+                for page_num, page in enumerate(doc):
+                  pix = page.get_pixmap(dpi=150)
+                  img = Image.frombytes(
+                      "RGB", [pix.width, pix.height], pix.samples
+                  )
+                  st.image(
+                      img,
+                      caption=f"صفحة {page_num + 1} من {file_name}",
+                      use_container_width=True,
+                  )
+                doc.close()
+              except Exception:
+                with open(file_path, "rb") as pdf_file:
+                  b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+                st.markdown(
+                    f"""
+                            <div style="text-align: center; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
+                                <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="padding: 0.5em 1em; background-color: #ff4b4b; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">📥 تحميل ومعاينة المستند</a>
+                            </div>
+                            """,
+                    unsafe_allow_html=True,
+                )
+
+          if st.button("❌ إغلاق المعاينة", key=f"close_{g_preview_key}"):
+            st.session_state[f"state_{g_preview_key}"] = False
+            st.rerun()
+          st.markdown("---")
+
+        if g_show_preview:
+          st.session_state[f"state_{g_preview_key}"] = not st.session_state.get(
+              f"state_{g_preview_key}", False
+          )
+          st.rerun()
+
+  if not found_any:
+    st.warning("لا توجد مستندات تطابق بحثك العام في أي من الأقسام.")
+
+  st.divider()
+
+# --- 2. اختيار القسم وتصفح الأقسام بالطريقة العادية ---
+st.header("📂 أقسام المستندات")
 
 if not categories:
   st.info(
@@ -63,9 +171,9 @@ else:
       if os.path.isfile(os.path.join(cat_path, f))
   ]
 
-  # خانة البحث
+  # خانة البحث داخل القسم المحدد
   search_query = st.text_input(
-      f"بحث في قسم ({selected_category}):", placeholder="اكتب اسم المستند..."
+      f"بحث داخل قسم ({selected_category}):", placeholder="اكتب اسم المستند..."
   )
 
   filtered_files = [
@@ -114,7 +222,7 @@ else:
           file_size = os.path.getsize(file_path)
           if file_size > 0:
             try:
-              import fitz  # استدعاء مكتبة PyMuPDF لعرض الـ PDF كصور
+              import fitz
 
               doc = fitz.open(file_path)
               st.success(
@@ -123,7 +231,7 @@ else:
               )
 
               for page_num, page in enumerate(doc):
-                pix = page.get_pixmap(dpi=150)  # جودة عالية وواضحة جداً
+                pix = page.get_pixmap(dpi=150)
                 img = Image.frombytes(
                     "RGB", [pix.width, pix.height], pix.samples
                 )
@@ -134,7 +242,6 @@ else:
                 )
               doc.close()
             except Exception as e:
-              # حل بديل آمن في حال عدم توفر المكتبة مؤقتاً
               with open(file_path, "rb") as pdf_file:
                 b64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
               st.markdown(
@@ -199,7 +306,6 @@ with st.expander(
         else (selected_target_cat if selected_target_cat else "عام")
     )
 
-    # تفعيل خاصية اختيار ورفع عدة ملفات في نفس الوقت باستخدام accept_multiple_files=True
     uploaded_files = st.file_uploader(
         "اختر ملفات متعددة (PDF أو صور)",
         type=["pdf", "png", "jpg", "jpeg"],
@@ -212,7 +318,6 @@ with st.expander(
       if not os.path.exists(target_cat_path):
         os.makedirs(target_cat_path)
 
-      # فحص الملفات المكررة والجديدة
       duplicates = []
       new_files = []
 
@@ -230,30 +335,27 @@ with st.expander(
         )
         for dup in duplicates:
           st.write(f"- {dup.name}")
-
         st.markdown(
             "اختر الإجراء المناسب للتعامل مع الملفات المكررة والجديدة معاً:"
         )
 
-      col_u1, col_u2 = st.columns(2)
-      with col_u1:
-        if st.button(
-            "✅ رفع الكل (مع استبدال الملفات المكررة إن وجدت)",
-            type="primary",
-            key="btn_upload_all",
-        ):
-          for file in uploaded_files:
-            f_path = os.path.join(target_cat_path, file.name)
-            with open(f_path, "wb") as f:
-              f.write(file.getbuffer())
-          st.success(
-              f"تم رفع واستبدال عدد {len(uploaded_files)} ملف بنجاح في قسم:"
-              f" **{target_category}**!"
-          )
-          st.rerun()
-
-      with col_u2:
-        if duplicates:
+        col_u1, col_u2 = st.columns(2)
+        with col_u1:
+          if st.button(
+              "✅ رفع الكل (مع استبدال الملفات المكررة)",
+              type="primary",
+              key="btn_upload_all",
+          ):
+            for file in uploaded_files:
+              f_path = os.path.join(target_cat_path, file.name)
+              with open(f_path, "wb") as f:
+                f.write(file.getbuffer())
+            st.success(
+                f"تم رفع واستبدال عدد {len(uploaded_files)} ملف بنجاح في قسم:"
+                f" **{target_category}**!"
+            )
+            st.rerun()
+        with col_u2:
           if st.button(
               "📥 رفع الملفات الجديدة فقط (تخطي المكررة)", key="btn_upload_new"
           ):
@@ -266,6 +368,19 @@ with st.expander(
                 f" **{target_category}**!"
             )
             st.rerun()
+      else:
+        if st.button(
+            "رفع الملفات المحددة الآن", type="primary", key="btn_upload_plain"
+        ):
+          for file in uploaded_files:
+            f_path = os.path.join(target_cat_path, file.name)
+            with open(f_path, "wb") as f:
+              f.write(file.getbuffer())
+          st.success(
+              f"تم رفع عدد {len(uploaded_files)} ملف بنجاح إلى قسم:"
+              f" **{target_category}**!"
+          )
+          st.rerun()
 
     st.divider()
 
