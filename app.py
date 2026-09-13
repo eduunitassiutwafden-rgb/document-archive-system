@@ -58,6 +58,19 @@ st.markdown(
     "مرحباً بك. يمكنك تصفح المستندات مقسمة حسب الأقسام، أو البحث العام الذكي في"
     " كافة المستندات."
 )
+
+# سطر الاعتماد البارز والمميز بخط جميل وواضح
+st.markdown(
+    """
+    <div style="background-color: #f8f9fa; padding: 10px 15px; border-radius: 8px; border-right: 5px solid #ff4b4b; margin-top: 10px; margin-bottom: 10px;">
+        <p style="color: #2c3e50; font-size: 15px; font-weight: bold; margin: 0;">
+            ✨ فكرة وإعداد وإنشاء وتنفيذ: <span style="color: #d9534f;">أ / محمد سيد عيد مصطفى</span> — موظف بالإدارة العامة لشئون التعليم والطلاب - جامعة أسيوط
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.divider()
 
 categories = [
