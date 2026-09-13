@@ -34,13 +34,13 @@ def normalize_arabic(text):
     return ""
   # إزالة الحركات التشكيلية
   text = re.sub(r"[\u064b-\u0652]", "", text)
-  # توحيد الألفات (أ, إ, آ, لإ, لأ -> ا)
+  # توحيد الألفات
   text = re.sub("[إأآٱٱ]", "ا", text)
   text = re.sub("لإ", "لا", text)
   text = re.sub("لأ", "لا", text)
-  # توحيد الهاء والتاء المربوطة (ه, ة -> ه أو ت - سنقوم بتوحيدهم إلى حرف موحد لتجاهل الفارق)
+  # توحيد الهاء والتاء المربوطة
   text = text.replace("ة", "ه")
-  # توحيد الياء والألف المقصورة (ى, ي, ؤ, ئ -> ي أو إزالة الفارق)
+  # توحيد الياء والألف المقصورة
   text = text.replace("ى", "ي")
   text = text.replace("ؤ", "و")
   text = text.replace("ئ", "ي")
@@ -87,7 +87,6 @@ if global_search.strip():
         f for f in os.listdir(c_path) if os.path.isfile(os.path.join(c_path, f))
     ]
 
-    # مطابقة ذكية تقارن النصوص بعد تنظيفها من الفروق الإملائية
     matched_files = [
         f
         for f in c_files
@@ -118,7 +117,6 @@ if global_search.strip():
           g_preview_key = f"g_preview_{cat}_{file_name}"
           g_show_preview = st.button("👁️ معاينة", key=g_preview_key)
 
-        # عرض المعاينة للبحث العام
         if st.session_state.get(f"state_{g_preview_key}", False):
           st.markdown(
               f"""
@@ -199,7 +197,6 @@ else:
       if os.path.isfile(os.path.join(cat_path, f))
   ]
 
-  # خانة البحث الذكي داخل القسم المحدد
   search_query = st.text_input(
       f"بحث ذكي داخل قسم ({selected_category}):", placeholder="اكتب للبحث..."
   )
@@ -235,7 +232,6 @@ else:
         preview_key = f"preview_{selected_category}_{file_name}"
         show_preview = st.button("👁️ معاينة", key=preview_key)
 
-      # --- عرض المعاينة بطريقة ذكية وآمنة داخل الصفحة ---
       if st.session_state.get(f"state_{preview_key}", False):
         st.markdown(
             f"""
@@ -304,7 +300,7 @@ else:
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
 
 with st.expander(
-    "🛠️ لوحة تحكم المدير (إضافة ملفات متعددة، حذف، تعديل، ونقل)"
+    "🛠️ لوحة تحكم المدير (واتساب، رفع ملفات، حذف، تعديل، ونقل)"
 ):
   admin_pass = st.text_input("أدخل كلمة مرور المدير:", type="password")
 
@@ -312,8 +308,30 @@ with st.expander(
     st.success("تم تسجيل الدخول بنجاح كمدير! ✅")
     st.divider()
 
-    # --- القسم الأول: رفع ملفات متعددة دفعة واحدة مع فحص التكرار ---
-    st.subheader("📤 رفع مستندات متعددة دفعة واحدة")
+    # --- زر الدخول المباشر لجروب الواتساب الخاص بالعمل ---
+    st.subheader("💬 وصول سريع لمجموعة الواتساب")
+    st.markdown(
+        "اضغط على الزر أدناه لفتح جروب الواتساب الخاص بك وتحميل المستندات المطلوبة"
+        " إلى جهازك:"
+    )
+
+    whatsapp_group_link = "https://chat.whatsapp.com/BC50W9tVIkkEPYsI7t8ISN"
+
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin-bottom: 20px;">
+            <a href="{whatsapp_group_link}" target="_blank" style="display: inline-block; background-color: #25D366; color: white; padding: 10px 20px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 8px;">
+                🟢 فتح مجموعة الواتساب لاستيراد الملفات
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+
+    # --- القسم الأول: رفع واستيراد مستندات متعددة للأقسام ---
+    st.subheader("📤 رفع واستيراد مستندات للأقسام")
 
     existing_cats = [
         d
@@ -338,7 +356,7 @@ with st.expander(
     )
 
     uploaded_files = st.file_uploader(
-        "اختر ملفات متعددة (PDF أو صور)",
+        "اختر الملفات التي قمت بتحميلها من الواتساب (PDF أو صور)",
         type=["pdf", "png", "jpg", "jpeg"],
         accept_multiple_files=True,
         key="multi_uploader",
