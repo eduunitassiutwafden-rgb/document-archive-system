@@ -165,15 +165,17 @@ else:
 # --- 3. لوحة تحكم المدير (المخفية تماماً في أسفل الصفحة) ---
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
 
-with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، تعديل، ونقل)"):
+with st.expander(
+    "🛠️ لوحة تحكم المدير (إضافة ملفات متعددة، حذف، تعديل، ونقل)"
+):
   admin_pass = st.text_input("أدخل كلمة مرور المدير:", type="password")
 
   if admin_pass == "Abo_jana97":
     st.success("تم تسجيل الدخول بنجاح كمدير! ✅")
     st.divider()
 
-    # --- القسم الأول: رفع مستند جديد مع منع التكرار ---
-    st.subheader("📤 رفع مستند جديد")
+    # --- القسم الأول: رفع ملفات متعددة دفعة واحدة مع فحص التكرار ---
+    st.subheader("📤 رفع مستندات متعددة دفعة واحدة")
 
     existing_cats = [
         d
@@ -181,12 +183,14 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
         if os.path.isdir(os.path.join(BASE_DOCS_DIR, d))
     ]
     new_cat = st.text_input(
-        "أو اكتب اسم قسم جديد (اختياري):", placeholder="مثال: عقود جديدة"
+        "أو اكتب اسم قسم جديد (اختياري):",
+        placeholder="مثال: عقود جديدة",
+        key="multi_new_cat",
     )
     selected_target_cat = st.selectbox(
         "اختر القسم للرفع:",
         options=existing_cats if existing_cats else ["عام"],
-        key="upload_cat_select",
+        key="multi_upload_cat_select",
     )
 
     target_category = (
@@ -195,76 +199,73 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
         else (selected_target_cat if selected_target_cat else "عام")
     )
 
-    uploaded_file = st.file_uploader(
-        "اختر الملف (PDF أو صور)", type=["pdf", "png", "jpg", "jpeg"]
+    # تفعيل خاصية اختيار ورفع عدة ملفات في نفس الوقت باستخدام accept_multiple_files=True
+    uploaded_files = st.file_uploader(
+        "اختر ملفات متعددة (PDF أو صور)",
+        type=["pdf", "png", "jpg", "jpeg"],
+        accept_multiple_files=True,
+        key="multi_uploader",
     )
 
-    # التحقق من تكرار اسم الملف قبل الحفظ النهائي
-    if uploaded_file is not None:
+    if uploaded_files:
       target_cat_path = os.path.join(BASE_DOCS_DIR, target_category)
-      existing_file_path = os.path.join(target_cat_path, uploaded_file.name)
+      if not os.path.exists(target_cat_path):
+        os.makedirs(target_cat_path)
 
-      if os.path.exists(existing_file_path):
+      # فحص الملفات المكررة والجديدة
+      duplicates = []
+      new_files = []
+
+      for file in uploaded_files:
+        f_path = os.path.join(target_cat_path, file.name)
+        if os.path.exists(f_path):
+          duplicates.append(file)
+        else:
+          new_files.append(file)
+
+      if duplicates:
         st.warning(
-            f"⚠️ تنبيه: الملف **({uploaded_file.name})** موجود مسبقاً في قسم"
-            f" **({target_category})**!"
+            f"⚠️ تنبيه: وُجدت {len(duplicates)} ملفات مكررة بنفس الاسم في قسم"
+            f" **({target_category})**:"
+        )
+        for dup in duplicates:
+          st.write(f"- {dup.name}")
+
+        st.markdown(
+            "اختر الإجراء المناسب للتعامل مع الملفات المكررة والجديدة معاً:"
         )
 
-        # زر معاينة الملف القديم للمقارنة
-        with st.expander("👀 معاينة الملف القديم الموجود حالياً"):
-          old_ext = uploaded_file.name.split(".")[-1].lower()
-          if old_ext in ["png", "jpg", "jpeg"]:
-            st.image(
-                existing_file_path,
-                caption="الملف القديم",
-                use_container_width=True,
-            )
-          elif old_ext == "pdf":
-            try:
-              import fitz
-
-              old_doc = fitz.open(existing_file_path)
-              for op_num, op_page in enumerate(old_doc):
-                op_pix = op_page.get_pixmap(dpi=150)
-                op_img = Image.frombytes(
-                    "RGB", [op_pix.width, op_pix.height], op_pix.samples
-                )
-                st.image(
-                    op_img,
-                    caption=f"صفحة {op_num + 1} من الملف القديم",
-                    use_container_width=True,
-                )
-              old_doc.close()
-            except Exception:
-              st.info(
-                  "الملف القديم موجود ويمكن تحميله من جدول العرض بالأعلى."
-              )
-
-        # خيارات الموافقة على الاستبدال أو الإلغاء
-        col_opt1, col_opt2 = st.columns(2)
-        with col_opt1:
-          if st.button("✅ موافق (استبدال ورفع الملف الجديد)", type="primary"):
-            with open(existing_file_path, "wb") as f:
-              f.write(uploaded_file.getbuffer())
-            st.success(
-                f"تم تحديث ورفع المستند ({uploaded_file.name}) بنجاح!"
-            )
-            st.rerun()
-        with col_opt2:
-          if st.button("❌ إلغاء الرفع"):
-            st.info("تم إلغاء عملية الرفع.")
-            st.rerun()
-
-      else:
-        if st.button("رفع الملف الآن", type="primary"):
-          if not os.path.exists(target_cat_path):
-            os.makedirs(target_cat_path)
-
-          file_path = os.path.join(target_cat_path, uploaded_file.name)
-          with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-          st.success(f"تم رفع الملف بنجاح إلى قسم: **{target_category}**!")
+      col_u1, col_u2 = st.columns(2)
+      with col_u1:
+        if st.button(
+            "✅ رفع الكل (مع استبدال الملفات المكررة إن وجدت)",
+            type="primary",
+            key="btn_upload_all",
+        ):
+          for file in uploaded_files:
+            f_path = os.path.join(target_cat_path, file.name)
+            with open(f_path, "wb") as f:
+              f.write(file.getbuffer())
+          st.success(
+              f"تم رفع واستبدال عدد {len(uploaded_files)} ملف بنجاح في قسم:"
+              f" **{target_category}**!"
+          )
           st.rerun()
+
+      with col_u2:
+        if duplicates:
+          if st.button(
+              "📥 رفع الملفات الجديدة فقط (تخطي المكررة)", key="btn_upload_new"
+          ):
+            for file in new_files:
+              f_path = os.path.join(target_cat_path, file.name)
+              with open(f_path, "wb") as f:
+                f.write(file.getbuffer())
+            st.success(
+                f"تم رفع {len(new_files)} ملفات جديدة بنجاح وتخطي المكررة في قسم:"
+                f" **{target_category}**!"
+            )
+            st.rerun()
 
     st.divider()
 
@@ -278,8 +279,8 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
         cat_to_rename = st.selectbox(
             "اختر القسم لإعادة تسميته:", categories, key="rename_select"
         )
-        new_name_input = st.text_input("اسم القسم الجديد:")
-        if st.button("تحديث اسم القسم"):
+        new_name_input = st.text_input("اسم القسم الجديد:", key="rename_input")
+        if st.button("تحديث اسم القسم", key="btn_rename"):
           if new_name_input.strip():
             old_p = os.path.join(BASE_DOCS_DIR, cat_to_rename)
             new_p = os.path.join(BASE_DOCS_DIR, new_name_input.strip())
@@ -297,7 +298,9 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
         cat_to_delete = st.selectbox(
             "اختر القسم للحذف:", categories, key="delete_cat_select"
         )
-        if st.button("حذف القسم ومستنداته", type="primary"):
+        if st.button(
+            "حذف القسم ومستنداته", type="primary", key="btn_delete_cat"
+        ):
           cat_path_del = os.path.join(BASE_DOCS_DIR, cat_to_delete)
           shutil.rmtree(cat_path_del)
           st.success(f"تم حذف القسم ({cat_to_delete}) بنجاح!")
@@ -328,7 +331,9 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
 
         with col_f1:
           st.markdown("##### 🗑️ حذف المستند")
-          if st.button("حذف هذا المستند نهائياً", type="primary"):
+          if st.button(
+              "حذف هذا المستند نهائياً", type="primary", key="btn_del_file"
+          ):
             os.remove(current_file_path)
             st.success(f"تم حذف المستند ({file_to_manage}) بنجاح!")
             st.rerun()
@@ -340,7 +345,7 @@ with st.expander("🛠️ لوحة تحكم المدير (إضافة، حذف، 
             target_move_cat = st.selectbox(
                 "انقل إلى القسم:", other_cats, key="target_move"
             )
-            if st.button("تنفيذ نقل المستند"):
+            if st.button("تنفيذ نقل المستند", key="btn_move_file"):
               dest_dir = os.path.join(BASE_DOCS_DIR, target_move_cat)
               dest_path = os.path.join(dest_dir, file_to_manage)
               shutil.move(current_file_path, dest_path)
