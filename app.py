@@ -47,10 +47,15 @@ def normalize_arabic(text):
   return text.strip().lower()
 
 
-# إعداد المجلد الرئيسي للمستندات
+# إعداد المجلد الرئيسي للمستندات وضمان وجوده ودعمه الدائم
 BASE_DOCS_DIR = "documents"
 if not os.path.exists(BASE_DOCS_DIR):
   os.makedirs(BASE_DOCS_DIR)
+
+# التأكد من وجود قسم افتراضي "عام" على الأقل لضمان عدم ظهور رسالة عدم وجود أقسام
+default_cat_path = os.path.join(BASE_DOCS_DIR, "عام")
+if not os.path.exists(default_cat_path):
+  os.makedirs(default_cat_path)
 
 # --- 1. رأس الصفحة والعنوان ---
 st.title("🗂️ بوابة استعراض وطباعة المستندات")
@@ -328,7 +333,7 @@ with st.expander(
         " إلى جهازك:"
     )
 
-    whatsapp_group_link = "https://web.whatsapp.com/"
+    whatsapp_group_link = "https://chat.whatsapp.com/BC50W9tVIkkEPYsI7t8ISN"
 
     st.markdown(
         f"""
